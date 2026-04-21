@@ -136,9 +136,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     // Always return the same message to avoid email enumeration
     if (!user) {
-      return {
-        message: 'If that email is registered, a reset link has been sent.',
-      };
+      return { message: 'If that email is registered, a reset link has been sent.' };
     }
 
     const resetToken = uuidv4();
@@ -149,20 +147,13 @@ export class AuthService {
       await this.sendPasswordResetEmail(user, resetToken);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.warn(
-        `Failed to send password reset email to ${user.email}: ${message}`,
-      );
+      this.logger.warn(`Failed to send password reset email to ${user.email}: ${message}`);
     }
 
-    return {
-      message: 'If that email is registered, a reset link has been sent.',
-    };
+    return { message: 'If that email is registered, a reset link has been sent.' };
   }
 
-  async resetPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<{ message: string }> {
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const user = await this.usersService.findByResetToken(token);
     if (!user) {
       throw new BadRequestException('Invalid or expired reset token');
@@ -176,10 +167,7 @@ export class AuthService {
     // Invalidate any existing sessions
     await this.usersService.updateRefreshToken(user.id, null);
 
-    return {
-      message:
-        'Password reset successfully. Please log in with your new password.',
-    };
+    return { message: 'Password reset successfully. Please log in with your new password.' };
   }
 
   async updateProfile(
@@ -218,10 +206,7 @@ export class AuthService {
   }
 
   async sendPasswordResetEmail(user: User, token: string): Promise<void> {
-    const frontendUrl = this.configService.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    );
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000');
     const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
     await this.mailerService.sendMail({
@@ -272,10 +257,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_SECRET'),
-        expiresIn: this.configService.get<string>(
-          'JWT_EXPIRES_IN',
-          '15m',
-        ) as StringValue,
+        expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '15m') as StringValue,
       }),
       this.jwtService.signAsync(payload, {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),

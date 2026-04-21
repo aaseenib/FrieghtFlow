@@ -1,14 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import { Suspense, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
-
-import { resetPassword } from '../../../lib/api/auth.api';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -20,49 +18,31 @@ import {
   CardHeader,
   CardTitle,
 } from '../../../components/ui/card';
+import { resetPassword } from '../../../lib/api/auth.api';
 
-const resetPasswordSchema = z
+const schema = z
   .object({
     newPassword: z.string().min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+    confirmPassword: z.string(),
   })
-  .refine((values) => values.newPassword === values.confirmPassword, {
-    message: 'Passwords must match',
+  .refine((d) => d.newPassword === d.confirmPassword, {
+    message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
 
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
-
-function getErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'message' in error) {
-    const message = (error as { message?: string | string[] }).message;
-    if (Array.isArray(message) && message.length > 0) {
-      return message[0] ?? 'Failed to reset password';
-    }
-    if (typeof message === 'string' && message.length > 0) {
-      return message;
-    }
-  }
-
-  return 'Failed to reset password';
-}
+type FormData = z.infer<typeof schema>;
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
-  const token = useMemo(() => searchParams.get('token')?.trim() ?? '', [searchParams]);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const token = searchParams.get('token') ?? '';
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      newPassword: '',
-      confirmPassword: '',
-    },
-  });
+    formState: { errors },
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   if (!token) {
     return (
@@ -70,25 +50,25 @@ function ResetPasswordForm() {
         <CardHeader>
           <CardTitle>Invalid link</CardTitle>
           <CardDescription>
-            This password reset link is missing or invalid. Request a new reset email to continue.
+            This password reset link is invalid or has already been used.
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button asChild className="w-full">
-            <Link href="/forgot-password">Request new link</Link>
-          </Button>
+          <Link href="/forgot-password" className="text-sm text-primary underline underline-offset-4">
+            Request a new link
+          </Link>
         </CardFooter>
       </Card>
     );
   }
 
-  if (isSuccess) {
+  if (done) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Password updated</CardTitle>
+          <CardTitle>Password updated!</CardTitle>
           <CardDescription>
-            Your password has been reset successfully. You can now sign in with your new password.
+            Your password has been reset. You can now sign in with your new password.
           </CardDescription>
         </CardHeader>
         <CardFooter>
@@ -100,20 +80,27 @@ function ResetPasswordForm() {
     );
   }
 
-  const onSubmit = async (data: ResetPasswordFormData) => {
+  const onSubmit = async (data: FormData) => {
+    setLoading(true);
     try {
       await resetPassword(token, data.newPassword);
-      setIsSuccess(true);
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error));
+      setDone(true);
+      toast.success('Password reset successfully!');
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? 'Reset failed. The link may have expired.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Reset password</CardTitle>
-        <CardDescription>Enter a new password for your account.</CardDescription>
+        <CardTitle className="text-2xl">Set new password</CardTitle>
+        <CardDescription>
+          Choose a strong password for your FreightFlow account.
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
@@ -122,8 +109,8 @@ function ResetPasswordForm() {
             <Input
               id="newPassword"
               type="password"
-              autoComplete="new-password"
               placeholder="••••••••"
+              autoComplete="new-password"
               {...register('newPassword')}
             />
             {errors.newPassword && (
@@ -135,8 +122,8 @@ function ResetPasswordForm() {
             <Input
               id="confirmPassword"
               type="password"
-              autoComplete="new-password"
               placeholder="••••••••"
+              autoComplete="new-password"
               {...register('confirmPassword')}
             />
             {errors.confirmPassword && (
@@ -144,10 +131,15 @@ function ResetPasswordForm() {
             )}
           </div>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Resetting…' : 'Reset password'}
+        <CardFooter className="flex flex-col gap-4">
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? 'Updating…' : 'Set new password'}
           </Button>
+          <p className="text-sm text-muted-foreground text-center">
+            <Link href="/login" className="text-primary underline underline-offset-4">
+              ← Back to sign in
+            </Link>
+          </p>
         </CardFooter>
       </form>
     </Card>

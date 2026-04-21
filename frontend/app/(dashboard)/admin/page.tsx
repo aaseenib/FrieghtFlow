@@ -1,104 +1,106 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { adminApi, type AdminStatsResponse } from "@/lib/api/admin.api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth.store";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useAuthStore } from '../../../stores/auth.store';
+import { adminApi, PlatformStats } from '../../../lib/api/admin.api';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
 
-export default function AdminStatsPage() {
+export default function AdminPage() {
   const router = useRouter();
-  const { user, isLoading: userLoading } = useAuthStore();
-  const [stats, setStats] = useState<AdminStatsResponse | null>(null);
+  const { user } = useAuthStore();
+  const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Redirect non-admins
   useEffect(() => {
-    if (!userLoading && user?.role !== "admin") {
-      router.push("/dashboard");
-    }
-  }, [user, userLoading, router]);
-
-  useEffect(() => {
-    if (userLoading) {
+    if (user && user.role !== 'admin') {
+      router.replace('/dashboard');
       return;
     }
+  }, [user, router]);
 
-    if (user?.role !== "admin") {
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    adminApi
+      .getStats()
+      .then(setStats)
+      .catch(() => toast.error('Failed to load platform stats'))
+      .finally(() => setLoading(false));
+  }, [user]);
 
-    async function fetchStats() {
-      try {
-        const data = await adminApi.getStats();
-        setStats(data);
-      } catch (err) {
-        console.error("Failed to load stats", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchStats();
-  }, [user, userLoading]);
-
-  if (userLoading || loading) {
-    return (
-      <div className="grid grid-cols-3 gap-4 p-6">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="h-24 w-full animate-pulse rounded-md bg-muted" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!user || user.role !== "admin" || !stats) {
-    return null;
-  }
+  if (!user || user.role !== 'admin') return null;
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Admin Overview</h1>
-
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Total Users" value={stats.users.total} />
-        <StatCard title="Active Users" value={stats.users.active} />
-        <StatCard title="Inactive Users" value={stats.users.inactive} />
-        <StatCard title="Shippers" value={stats.users.byRole.shipper} />
-        <StatCard title="Carriers" value={stats.users.byRole.carrier} />
-        <StatCard title="Admins" value={stats.users.byRole.admin} />
+    <div className="p-8 space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+        <p className="text-muted-foreground text-sm mt-1">Platform-wide overview</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Total Shipments" value={stats.shipments.total} />
-        <StatCard title="Pending" value={stats.shipments.byStatus.pending} />
-        <StatCard title="In Transit" value={stats.shipments.byStatus.in_transit} />
-        <StatCard title="Completed" value={stats.shipments.byStatus.completed} />
-        <StatCard
-          title="Disputed"
-          value={stats.shipments.disputesPending}
-          destructive={stats.shipments.disputesPending > 0}
-        />
-        <StatCard title="Cancelled" value={stats.shipments.byStatus.cancelled} />
+      {/* Quick nav */}
+      <div className="flex gap-3">
+        <Button asChild variant="outline" size="sm">
+          <Link href="/admin/users">Manage Users</Link>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/admin/shipments">All Shipments</Link>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <StatCard
-          title="Total Revenue"
-          value={new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: stats.revenue.currency,
-          }).format(stats.revenue.totalCompleted)}
-        />
-      </div>
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-28 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : stats ? (
+        <>
+          {/* User stats */}
+          <section>
+            <h2 className="text-base font-semibold mb-3">Users</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard title="Total Users" value={stats.users.total} />
+              <StatCard title="Active" value={stats.users.active} />
+              <StatCard title="Inactive" value={stats.users.inactive} />
+              <StatCard title="Shippers" value={stats.users.byRole.shipper ?? 0} />
+              <StatCard title="Carriers" value={stats.users.byRole.carrier ?? 0} />
+              <StatCard title="Admins" value={stats.users.byRole.admin ?? 0} />
+            </div>
+          </section>
 
-      <div className="flex gap-4">
-        <Button onClick={() => router.push("/admin/users")}>Manage Users</Button>
-        <Button onClick={() => router.push("/admin/shipments")}>Manage Shipments</Button>
-      </div>
+          {/* Shipment stats */}
+          <section>
+            <h2 className="text-base font-semibold mb-3">Shipments</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard title="Total" value={stats.shipments.total} />
+              <StatCard title="Pending" value={stats.shipments.byStatus.pending ?? 0} />
+              <StatCard title="In Transit" value={stats.shipments.byStatus.in_transit ?? 0} />
+              <StatCard title="Completed" value={stats.shipments.byStatus.completed ?? 0} />
+              <StatCard
+                title="Disputed"
+                value={stats.shipments.disputesPending}
+                highlight={stats.shipments.disputesPending > 0}
+              />
+              <StatCard title="Cancelled" value={stats.shipments.byStatus.cancelled ?? 0} />
+            </div>
+          </section>
+
+          {/* Revenue */}
+          <section>
+            <h2 className="text-base font-semibold mb-3">Revenue</h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                title="Completed Revenue"
+                value={`$${stats.revenue.totalCompleted.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              />
+            </div>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -106,19 +108,21 @@ export default function AdminStatsPage() {
 function StatCard({
   title,
   value,
-  destructive = false,
+  highlight = false,
 }: {
   title: string;
   value: string | number;
-  destructive?: boolean;
+  highlight?: boolean;
 }) {
   return (
-    <Card className={cn("w-full", destructive && "border-red-500")}>
-      <CardHeader>
-        <CardTitle className={cn(destructive && "text-red-600")}>{title}</CardTitle>
+    <Card className={highlight ? 'border-destructive/50' : undefined}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-xl font-bold">{value}</p>
+        <p className={`text-3xl font-bold ${highlight ? 'text-destructive' : 'text-foreground'}`}>
+          {value}
+        </p>
       </CardContent>
     </Card>
   );

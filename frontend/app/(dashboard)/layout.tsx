@@ -1,16 +1,11 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { ReactNode } from "react";
-import { useAuthStore } from "../../stores/auth.store";
-import { useShipmentSocket } from "../../hooks/useShipmentSocket";
-import { NotificationBell } from "../../components/notifications/notification-bell";
-
-interface DashboardLayoutProps {
-  children: ReactNode;
-}
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '../../lib/utils';
+import { useAuthStore } from '../../stores/auth.store';
+import { useShipmentSocket } from '../../hooks/useShipmentSocket';
+import { NotificationBell } from '../../components/notifications/notification-bell';
 
 const SHIPPER_NAV = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -33,33 +28,26 @@ const ADMIN_NAV = [
   { href: '/admin/shipments', label: 'Shipment Oversight' },
 ];
 
-interface DashboardLayoutProps {
-  children: ReactNode;
-}
-
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const user = useAuthStore((state) => state.user);
+  const { user, logout } = useAuthStore();
 
-  // Initialize the WebSocket connection for real-time shipment updates
+  // Connect to WebSocket and receive real-time shipment notifications
   useShipmentSocket();
 
-  // Determine nav items based on user role
-  const getNavItems = () => {
-    if (!user) return SHIPPER_NAV;
-    if (user.role === 'admin') return ADMIN_NAV;
-    if (user.role === 'carrier') return CARRIER_NAV;
-    return SHIPPER_NAV;
-  };
-
-  const navItems = getNavItems();
+  const navItems =
+    user?.role === 'carrier'
+      ? CARRIER_NAV
+      : user?.role === 'admin'
+        ? ADMIN_NAV
+        : SHIPPER_NAV;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
       <aside className="w-64 border-r bg-card flex flex-col">
-        <div className="h-16 flex items-center gap-2 px-4 border-b">
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+        <div className="h-16 flex items-center gap-2 px-6 border-b">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-xs">FF</span>
           </div>
           <span className="font-bold text-foreground flex-1">FreightFlow</span>
@@ -69,7 +57,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const active =
-              ['/dashboard', '/admin'].includes(item.href)
+              item.href === '/dashboard' || item.href === '/admin'
                 ? pathname === item.href
                 : pathname.startsWith(item.href);
 
@@ -90,31 +78,57 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           })}
         </nav>
 
-        {/* User footer section */}
-        <div className="p-4 border-t">
-          <Link
-            href="/profile"
-            className={cn(
-              "block px-3 py-2 rounded-md text-sm font-medium",
-              pathname === "/profile" && "bg-gray-200 text-gray-900"
-            )}
-          >
-            Profile
-          </Link>
-          <Link
-            href="/settings"
-            className={cn(
-              "block px-3 py-2 rounded-md text-sm font-medium",
-              pathname === "/settings" && "bg-gray-200 text-gray-900"
-            )}
-          >
-            Settings
-          </Link>
+        {/* User footer */}
+        <div className="border-t p-4">
+          {user && (
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                {user.firstName[0]}
+                {user.lastName[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+              </div>
+            </div>
+          )}
+          <div className="mt-3 space-y-1">
+            <Link
+              href="/profile"
+              className={cn(
+                'block w-full text-left text-xs px-1 py-1 rounded transition-colors',
+                pathname === '/profile'
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Profile
+            </Link>
+            <Link
+              href="/settings"
+              className={cn(
+                'block w-full text-left text-xs px-1 py-1 rounded transition-colors',
+                pathname === '/settings'
+                  ? 'text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Settings
+            </Link>
+            <button
+              onClick={logout}
+              className="w-full text-left text-xs text-muted-foreground hover:text-foreground transition-colors px-1 py-1"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">{children}</main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }

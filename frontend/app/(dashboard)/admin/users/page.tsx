@@ -2,221 +2,264 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '../../../../stores/auth.store';
-import { adminApi } from '../../../../lib/api/admin.api';
-import { User } from '../../../../types/auth.types';
-import { Button } from '../../../../components/ui/button';
-import { Card } from '../../../../components/ui/card';
 import { toast } from 'sonner';
+import { useAuthStore } from '../../../../stores/auth.store';
+import { adminApi, PaginatedUsers } from '../../../../lib/api/admin.api';
+import type { User, UserRole } from '../../../../types/auth.types';
+import { Button } from '../../../../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '../../../../components/ui/card';
+
+const ROLE_OPTIONS: { label: string; value: UserRole | 'all' }[] = [
+  { label: 'All Roles', value: 'all' },
+  { label: 'Shippers', value: 'shipper' },
+  { label: 'Carriers', value: 'carrier' },
+  { label: 'Admins', value: 'admin' },
+];
+
+const STATUS_OPTIONS: { label: string; value: boolean | 'all' }[] = [
+  { label: 'All', value: 'all' },
+  { label: 'Active', value: true },
+  { label: 'Inactive', value: false },
+];
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  
-  const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser } = useAuthStore();
+  const [result, setResult] = useState<PaginatedUsers | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  const [roleFilter, setRoleFilter] = useState('All Roles');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [roleFilter, setRoleFilter] = useState<UserRole | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<boolean | 'all'>('all');
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const loadUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await adminApi.listUsers(page, roleFilter, statusFilter);
-      setUsers(res.users || []);
-      setTotalPages(res.totalPages || Math.max(1, Math.ceil((res.total || 0) / (res.limit || 10))));
-    } catch (err) {
-      toast.error((err as Error).message || 'Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, roleFilter, statusFilter]);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.role !== 'admin') {
-      router.push('/dashboard');
-    } else if (user) {
-      loadUsers();
+    if (currentUser && currentUser.role !== 'admin') {
+      router.replace('/dashboard');
     }
-  }, [user, router, loadUsers]);
+  }, [currentUser, router]);
 
-  const handleRoleChange = async (targetUserId: string, newRole: string) => {
+  const load = useCallback(() => {
+    setLoading(true);
+    adminApi
+      .listUsers({
+        role: roleFilter === 'all' ? undefined : roleFilter,
+        isActive: statusFilter === 'all' ? undefined : statusFilter,
+        page,
+        limit: 20,
+      })
+      .then(setResult)
+      .catch(() => toast.error('Failed to load users'))
+      .finally(() => setLoading(false));
+  }, [roleFilter, statusFilter, page]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    load();
+  }, [currentUser, load]);
+
+  const handleToggleActive = async (user: User) => {
+    setActionLoading(user.id);
     try {
-      await adminApi.changeUserRole(targetUserId, newRole);
-      toast.success('User role updated');
-      loadUsers();
-    } catch (err) {
-      toast.error((err as Error).message || 'Failed to change role');
+      const updated = user.isActive
+        ? await adminApi.deactivateUser(user.id)
+        : await adminApi.activateUser(user.id);
+      toast.success(`${updated.firstName} ${updated.isActive ? 'activated' : 'deactivated'}`);
+      load();
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? 'Action failed');
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const handleStatusToggle = async (targetUser: User) => {
+  const handleChangeRole = async (user: User, newRole: UserRole) => {
+    setActionLoading(user.id + '_role');
     try {
-      if (targetUser.isActive) {
-        await adminApi.deactivateUser(targetUser.id);
-        toast.success('User deactivated');
-      } else {
-        await adminApi.activateUser(targetUser.id);
-        toast.success('User activated');
-      }
-      loadUsers();
-    } catch (err) {
-      toast.error((err as Error).message || 'Failed to update status');
+      await adminApi.changeUserRole(user.id, newRole);
+      toast.success(`Role updated to ${newRole}`);
+      load();
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error?.message ?? 'Failed to change role');
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  if (!user || user.role !== 'admin') {
-    return null; // Don't render while redirecting or loading auth
-  }
+  if (!currentUser || currentUser.role !== 'admin') return null;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-8 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Manage Users</h1>
-        <p className="text-muted-foreground mt-1">View and manage all users on the platform.</p>
+        <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          {result ? `${result.total} total users` : 'Loading…'}
+        </p>
       </div>
 
-      <Card className="p-4 border shadow-sm flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center">
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm font-medium mr-2">Role:</span>
-          {['All Roles', 'Shippers', 'Carriers', 'Admins'].map((role) => (
-            <Button
-              key={role}
-              variant={roleFilter === role ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setRoleFilter(role);
-                setPage(1);
-              }}
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex gap-1 border border-border rounded-md overflow-hidden">
+          {ROLE_OPTIONS.map((opt) => (
+            <button
+              key={String(opt.value)}
+              onClick={() => { setRoleFilter(opt.value as UserRole | 'all'); setPage(1); }}
+              className={`px-3 py-1.5 text-sm transition-colors ${
+                roleFilter === opt.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
             >
-              {role}
-            </Button>
+              {opt.label}
+            </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2 items-center">
-          <span className="text-sm font-medium mr-2">Status:</span>
-          {['All', 'Active', 'Inactive'].map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => {
-                setStatusFilter(status);
-                setPage(1);
-              }}
+        <div className="flex gap-1 border border-border rounded-md overflow-hidden">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={String(opt.value)}
+              onClick={() => { setStatusFilter(opt.value as boolean | 'all'); setPage(1); }}
+              className={`px-3 py-1.5 text-sm transition-colors ${
+                statusFilter === opt.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
             >
-              {status}
-            </Button>
+              {opt.label}
+            </button>
           ))}
         </div>
-      </Card>
+      </div>
 
-      <Card className="border shadow-sm overflow-x-auto text-sm">
-        <table className="w-full text-left whitespace-nowrap">
-          <thead className="bg-muted/50 border-b">
-            <tr>
-              <th className="h-12 px-4 font-medium">Name</th>
-              <th className="h-12 px-4 font-medium">Email</th>
-              <th className="h-12 px-4 font-medium">Role</th>
-              <th className="h-12 px-4 font-medium">Status</th>
-              <th className="h-12 px-4 font-medium">Joined Date</th>
-              <th className="h-12 px-4 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y relative">
-            {loading && users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="h-24 text-center text-muted-foreground">
-                  Loading users...
-                </td>
-              </tr>
-            )}
-            {!loading && users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No users found.
-                </td>
-              </tr>
-            )}
-            {users.map((u) => {
-              const isSelf = u.id === user.id;
-              
-              return (
-                <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-4 font-medium">
-                    {u.firstName} {u.lastName} {isSelf && <span className="text-muted-foreground ml-1 font-normal">(you)</span>}
-                  </td>
-                  <td className="p-4 text-muted-foreground">{u.email}</td>
-                  <td className="p-4">
-                    {isSelf ? (
-                      <span className="capitalize">{u.role}</span>
-                    ) : (
-                      <select
-                        className="h-8 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        disabled={loading && users.length > 0} // disable while loading new data
-                      >
-                        <option value="admin">Admin</option>
-                        <option value="shipper">Shipper</option>
-                        <option value="carrier">Carrier</option>
-                      </select>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded-full ${
-                        u.isActive
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}
-                    >
-                      {u.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="p-4 text-muted-foreground">
-                    {new Date(u.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-right">
-                    {!isSelf && (
-                      <Button
-                        variant={u.isActive ? 'secondary' : 'default'}
-                        size="sm"
-                        onClick={() => handleStatusToggle(u)}
-                        disabled={loading && users.length > 0}
-                      >
-                        {u.isActive ? 'Deactivate' : 'Activate'}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </Card>
+      {/* Table */}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
+          ))}
+        </div>
+      ) : !result || result.data.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No users found.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Users</CardTitle>
+            <CardDescription>
+              Page {result.page} of {result.totalPages}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Name</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Role</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Joined</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {result.data.map((user) => {
+                    const isSelf = user.id === currentUser.id;
+                    return (
+                      <tr key={user.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3 font-medium">
+                          {user.firstName} {user.lastName}
+                          {isSelf && (
+                            <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
+                        <td className="px-4 py-3">
+                          {isSelf ? (
+                            <span className="capitalize text-muted-foreground">{user.role}</span>
+                          ) : (
+                            <select
+                              value={user.role}
+                              disabled={actionLoading === user.id + '_role'}
+                              onChange={(e) => handleChangeRole(user, e.target.value as UserRole)}
+                              className="text-sm bg-background border border-border rounded px-2 py-1 capitalize cursor-pointer"
+                            >
+                              <option value="shipper">Shipper</option>
+                              <option value="carrier">Carrier</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              user.isActive
+                                ? 'bg-green-500/10 text-green-600'
+                                : 'bg-destructive/10 text-destructive'
+                            }`}
+                          >
+                            {user.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs">
+                          {new Date(user.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!isSelf && (
+                            <Button
+                              variant={user.isActive ? 'destructive' : 'outline'}
+                              size="sm"
+                              disabled={actionLoading === user.id}
+                              onClick={() => handleToggleActive(user)}
+                            >
+                              {actionLoading === user.id
+                                ? '…'
+                                : user.isActive
+                                ? 'Deactivate'
+                                : 'Activate'}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-          <p className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+      {/* Pagination */}
+      {result && result.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-muted-foreground">
+            Showing {result.data.length} of {result.total} users
           </p>
           <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
             >
               Previous
             </Button>
             <Button
               variant="outline"
               size="sm"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === result.totalPages}
+              onClick={() => setPage((p) => p + 1)}
             >
               Next
             </Button>

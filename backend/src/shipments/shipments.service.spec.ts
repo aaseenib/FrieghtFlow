@@ -59,7 +59,7 @@ function makeShipment(overrides: Partial<Shipment> = {}): Shipment {
   };
 }
 
-function mockRepo<T>() {
+function mockRepo() {
   return {
     findOne: jest.fn(),
     findAndCount: jest.fn(),
@@ -84,8 +84,8 @@ describe('ShipmentsService', () => {
   let eventEmitter: jest.Mocked<EventEmitter2>;
 
   beforeEach(async () => {
-    shipmentRepo = mockRepo<Shipment>();
-    historyRepo = mockRepo<ShipmentStatusHistory>();
+    shipmentRepo = mockRepo();
+    historyRepo = mockRepo();
     eventEmitter = { emit: jest.fn() } as unknown as jest.Mocked<EventEmitter2>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -163,7 +163,7 @@ describe('ShipmentsService', () => {
       historyRepo.create.mockReturnValue({} as ShipmentStatusHistory);
       historyRepo.save.mockResolvedValue({} as ShipmentStatusHistory);
 
-      const result = await service.accept('shipment-uuid-1', carrier);
+      await service.accept('shipment-uuid-1', carrier);
 
       expect(shipmentRepo.save).toHaveBeenCalledWith(
         expect.objectContaining({ status: ShipmentStatus.ACCEPTED, carrierId: carrier.id }),

@@ -154,10 +154,7 @@ export class ShipmentsService {
     );
     // Reload with relations for notification payload
     const full = await this.findOne(saved.id);
-    this.eventEmitter.emit(
-      SHIPMENT_CREATED,
-      new ShipmentEvent(full, shipperId),
-    );
+    this.eventEmitter.emit(SHIPMENT_CREATED, new ShipmentEvent(full, shipperId));
     return saved;
   }
 
@@ -279,10 +276,7 @@ export class ShipmentsService {
       carrier.id,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_ACCEPTED,
-      new ShipmentEvent(full, carrier.id),
-    );
+    this.eventEmitter.emit(SHIPMENT_ACCEPTED, new ShipmentEvent(full, carrier.id));
     return saved;
   }
 
@@ -309,10 +303,7 @@ export class ShipmentsService {
       carrier.id,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_IN_TRANSIT,
-      new ShipmentEvent(full, carrier.id),
-    );
+    this.eventEmitter.emit(SHIPMENT_IN_TRANSIT, new ShipmentEvent(full, carrier.id));
     return saved;
   }
 
@@ -340,10 +331,7 @@ export class ShipmentsService {
       carrier.id,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_DELIVERED,
-      new ShipmentEvent(full, carrier.id),
-    );
+    this.eventEmitter.emit(SHIPMENT_DELIVERED, new ShipmentEvent(full, carrier.id));
     return saved;
   }
 
@@ -368,10 +356,7 @@ export class ShipmentsService {
       shipper.id,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_COMPLETED,
-      new ShipmentEvent(full, shipper.id),
-    );
+    this.eventEmitter.emit(SHIPMENT_COMPLETED, new ShipmentEvent(full, shipper.id));
     return saved;
   }
 
@@ -406,10 +391,7 @@ export class ShipmentsService {
       reason,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_CANCELLED,
-      new ShipmentEvent(full, user.id, reason),
-    );
+    this.eventEmitter.emit(SHIPMENT_CANCELLED, new ShipmentEvent(full, user.id, reason));
     return saved;
   }
 
@@ -444,10 +426,7 @@ export class ShipmentsService {
       reason,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_DISPUTED,
-      new ShipmentEvent(full, user.id, reason),
-    );
+    this.eventEmitter.emit(SHIPMENT_DISPUTED, new ShipmentEvent(full, user.id, reason));
     return saved;
   }
 
@@ -470,10 +449,7 @@ export class ShipmentsService {
       reason,
     );
     const full = await this.findOne(shipmentId);
-    this.eventEmitter.emit(
-      SHIPMENT_DISPUTE_RESOLVED,
-      new ShipmentEvent(full, admin.id, reason),
-    );
+    this.eventEmitter.emit(SHIPMENT_DISPUTE_RESOLVED, new ShipmentEvent(full, admin.id, reason));
     return saved;
   }
 

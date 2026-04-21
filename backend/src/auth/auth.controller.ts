@@ -124,10 +124,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ auth: { limit: 5, ttl: 900_000 } }) // 5 per 15 minutes
   @ApiOperation({ summary: 'Request a password reset email' })
-  @ApiResponse({
-    status: 200,
-    description: 'Reset email sent if account exists',
-  })
+  @ApiResponse({ status: 200, description: 'Reset email sent if account exists' })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
@@ -148,7 +145,10 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({ status: 200, description: 'Profile updated' })
-  updateProfile(@CurrentUser() user: User, @Body() dto: UpdateProfileDto) {
+  updateProfile(
+    @CurrentUser() user: User,
+    @Body() dto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(user.id, dto);
   }
 
@@ -158,12 +158,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Change password while authenticated' })
   @ApiResponse({ status: 200, description: 'Password changed' })
   @ApiResponse({ status: 401, description: 'Current password incorrect' })
-  changePassword(@CurrentUser() user: User, @Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(
-      user.id,
-      dto.currentPassword,
-      dto.newPassword,
-    );
+  changePassword(
+    @CurrentUser() user: User,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.id, dto.currentPassword, dto.newPassword);
   }
 
   private setAuthCookie(res: Response, accessToken: string): void {

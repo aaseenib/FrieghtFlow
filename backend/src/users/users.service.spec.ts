@@ -172,8 +172,8 @@ describe('UsersService', () => {
         expect.objectContaining({ refreshToken: expect.any(String) }),
       );
       // The stored value should NOT be the raw token
-      const stored = repo.update!.mock.calls[0][1].refreshToken as string;
-      expect(stored).not.toBe('raw-refresh-token');
+      const updateArgs = repo.update!.mock.calls[0] as [string, { refreshToken: string }];
+      expect(updateArgs[1].refreshToken).not.toBe('raw-refresh-token');
     });
 
     it('stores null when token is null (logout)', async () => {

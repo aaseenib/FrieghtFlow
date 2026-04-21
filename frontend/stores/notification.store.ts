@@ -1,14 +1,13 @@
 'use client';
 
 import { create } from 'zustand';
-import type { ShipmentStatus } from '../types/shipment.types';
 
 export interface ShipmentNotification {
   id: string;
   event: string;
   shipmentId: string;
   trackingNumber: string;
-  status: ShipmentStatus;
+  status: string;
   origin: string;
   destination: string;
   updatedAt: string;
@@ -18,52 +17,32 @@ export interface ShipmentNotification {
 interface NotificationState {
   notifications: ShipmentNotification[];
   unreadCount: number;
-  addNotification: (notification: Omit<ShipmentNotification, 'id' | 'read'>) => void;
-  markAllAsRead: () => void;
-  markAsRead: (id: string) => void;
-  clearNotifications: () => void;
+  addNotification: (n: Omit<ShipmentNotification, 'id' | 'read'>) => void;
+  markAllRead: () => void;
+  clearAll: () => void;
 }
-
-const generateId = (): string => {
-  return `notif-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   notifications: [],
   unreadCount: 0,
 
-  addNotification: (notification) =>
+  addNotification: (n) =>
     set((state) => {
-      const newNotification: ShipmentNotification = {
-        ...notification,
-        id: generateId(),
+      const notification: ShipmentNotification = {
+        ...n,
+        id: `${n.shipmentId}-${Date.now()}`,
         read: false,
       };
-      // Keep only the last 20 notifications
-      const updatedNotifications = [newNotification, ...state.notifications].slice(0, 20);
-      return {
-        notifications: updatedNotifications,
-        unreadCount: state.unreadCount + 1,
-      };
+      // Keep only the most recent 20 notifications
+      const notifications = [notification, ...state.notifications].slice(0, 20);
+      return { notifications, unreadCount: state.unreadCount + 1 };
     }),
 
-  markAllAsRead: () =>
+  markAllRead: () =>
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, read: true })),
       unreadCount: 0,
     })),
 
-  markAsRead: (id) =>
-    set((state) => {
-      const notification = state.notifications.find((n) => n.id === id);
-      if (!notification || notification.read) return state;
-      return {
-        notifications: state.notifications.map((n) =>
-          n.id === id ? { ...n, read: true } : n
-        ),
-        unreadCount: Math.max(0, state.unreadCount - 1),
-      };
-    }),
-
-  clearNotifications: () => set({ notifications: [], unreadCount: 0 }),
+  clearAll: () => set({ notifications: [], unreadCount: 0 }),
 }));

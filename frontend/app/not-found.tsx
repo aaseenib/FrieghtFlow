@@ -1,47 +1,41 @@
-import Link from "next/link";
-import { buttonVariants } from "../components/ui/button";
-import { cn } from "../lib/utils";
+import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6 py-16 text-foreground">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_oklab,var(--color-primary)_8%,transparent)_0%,transparent_50%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(to_top,_color-mix(in_oklab,var(--color-muted)_70%,transparent),transparent)]" />
-
-      <section className="relative z-10 mx-auto flex w-full max-w-2xl flex-col items-center rounded-[2rem] border border-border bg-card/95 px-8 py-12 text-center shadow-2xl shadow-black/5 backdrop-blur sm:px-12">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-lg font-black tracking-tight text-primary-foreground shadow-lg shadow-primary/20">
-          FF
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="text-center space-y-6 max-w-md">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-xl">FF</span>
+          </div>
         </div>
 
-        <p className="mt-8 text-7xl font-semibold tracking-tight text-muted-foreground/60 sm:text-8xl">
-          404
-        </p>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Page not found
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">
-          The route you requested does not exist or may have moved. Jump back into FreightFlow
-          from the dashboard or head straight to your shipment workspace.
-        </p>
+        {/* Heading */}
+        <div className="space-y-2">
+          <p className="text-8xl font-black text-primary/20">404</p>
+          <h1 className="text-2xl font-bold text-foreground">Page not found</h1>
+          <p className="text-muted-foreground text-sm">
+            The page you&apos;re looking for doesn&apos;t exist or has been moved.
+          </p>
+        </div>
 
-        <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        {/* Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/dashboard"
-            className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             Go to Dashboard
           </Link>
           <Link
             href="/shipments"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "w-full sm:w-auto",
-            )}
+            className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             View Shipments
           </Link>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
