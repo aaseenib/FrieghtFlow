@@ -118,11 +118,7 @@ export class UsersService {
       .getOne();
   }
 
-  async setResetToken(
-    id: string,
-    token: string,
-    expiry: Date,
-  ): Promise<void> {
+  async setResetToken(id: string, token: string, expiry: Date): Promise<void> {
     await this.usersRepository.update(id, {
       resetPasswordToken: token,
       resetPasswordExpiry: expiry,

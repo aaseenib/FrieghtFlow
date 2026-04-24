@@ -35,7 +35,8 @@ export class DocumentsService {
     const shipment = await this.shipmentRepo.findOne({
       where: { id: shipmentId },
     });
-    if (!shipment) throw new NotFoundException(`Shipment ${shipmentId} not found`);
+    if (!shipment)
+      throw new NotFoundException(`Shipment ${shipmentId} not found`);
     return shipment;
   }
 
@@ -115,7 +116,10 @@ export class DocumentsService {
 
   // ── Download ─────────────────────────────────────────────────────────────────
 
-  async getFilePath(id: string, user: User): Promise<{ filePath: string; originalName: string }> {
+  async getFilePath(
+    id: string,
+    user: User,
+  ): Promise<{ filePath: string; originalName: string }> {
     const doc = await this.findOne(id, user);
     const filePath = path.join(this.uploadDir, doc.storedName);
 
@@ -133,7 +137,9 @@ export class DocumentsService {
 
     // Only the uploader or admin can delete
     if (doc.uploaderId !== user.id && user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException('Only the uploader or an admin can delete this document');
+      throw new ForbiddenException(
+        'Only the uploader or an admin can delete this document',
+      );
     }
 
     const filePath = path.join(this.uploadDir, doc.storedName);

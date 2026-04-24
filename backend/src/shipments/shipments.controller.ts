@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Query,
+  Res,
   ParseUUIDPipe,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ShipmentsService } from './shipments.service';
 import { CreateShipmentDto } from './dto/create-shipment.dto';
 import { UpdateShipmentDto } from './dto/update-shipment.dto';
@@ -28,6 +30,8 @@ import { ShipmentStatus } from '../common/enums/shipment-status.enum';
 import { User } from '../users/entities/user.entity';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ExportShipmentsDto } from './dto/export-shipments.dto';
 
 class DisputeBody {
   @ApiPropertyOptional()
@@ -61,10 +65,20 @@ export class ShipmentsController {
   // ── Shipper actions ──────────────────────────────────────────────────────────
 
   @Post()
+  @Throttle({ shipmentCreate: { limit: 10, ttl: 60_000 } })
   @UseGuards(RolesGuard)
   @Roles(UserRole.SHIPPER, UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a new shipment (Shippers only)' })
+  @ApiOperation({
+    summary: 'Create a new shipment (Shippers only)',
+    description:
+      'Authenticated users can create up to 10 shipments per minute on this endpoint.',
+  })
   @ApiResponse({ status: 201, description: 'Shipment created' })
+  @ApiResponse({
+    status: 429,
+    description:
+      'Shipment creation rate limit exceeded. Authenticated users can create up to 10 shipments per minute.',
+  })
   create(@CurrentUser() user: User, @Body() dto: CreateShipmentDto) {
     return this.shipmentsService.create(user.id, dto);
   }
@@ -121,9 +135,45 @@ export class ShipmentsController {
   // ── Shared actions ───────────────────────────────────────────────────────────
 
   @Get()
-  @ApiOperation({ summary: 'List my shipments (role-filtered)' })
+  @ApiOperation({
+    summary: 'List my shipments (role-filtered)',
+    description:
+      'Optional origin and destination query params perform case-insensitive partial matching.',
+  })
   findAll(@CurrentUser() user: User, @Query() query: QueryShipmentDto) {
     return this.shipmentsService.findAll(user, query);
+  }
+
+  @Get('export')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SHIPPER, UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Export shipments as CSV or JSON',
+    description:
+      'Shippers export only their own shipments, while admins can export all shipments. Responses are streamed.',
+  })
+  @ApiResponse({ status: 200, description: 'Shipment export stream' })
+  async exportShipments(
+    @CurrentUser() user: User,
+    @Query() query: ExportShipmentsDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const exportResult = await this.shipmentsService.exportShipments(
+      user,
+      query.format,
+    );
+
+    res.setHeader('Content-Type', exportResult.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${exportResult.fileName}"`,
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      exportResult.stream.once('error', reject);
+      res.once('close', resolve);
+      exportResult.stream.pipe(res);
+    });
   }
 
   @Get('track/:trackingNumber')

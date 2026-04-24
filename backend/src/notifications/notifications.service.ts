@@ -21,7 +21,11 @@ export class NotificationsService {
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  private async sendSafe(to: string, subject: string, html: string): Promise<void> {
+  private async sendSafe(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
     try {
       await this.mailerService.sendMail({ to, subject, html });
     } catch (err: unknown) {
@@ -182,9 +186,14 @@ export class NotificationsService {
   }
 
   @OnEvent(SHIPMENT_CANCELLED)
-  async onShipmentCancelled({ shipment, reason }: ShipmentEvent): Promise<void> {
+  async onShipmentCancelled({
+    shipment,
+    reason,
+  }: ShipmentEvent): Promise<void> {
     const { shipper, carrier } = shipment;
-    const reasonNote = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : '';
+    const reasonNote = reason
+      ? `<p><strong>Reason:</strong> ${reason}</p>`
+      : '';
 
     if (shipper) {
       await this.sendSafe(
@@ -222,7 +231,9 @@ export class NotificationsService {
   @OnEvent(SHIPMENT_DISPUTED)
   async onShipmentDisputed({ shipment, reason }: ShipmentEvent): Promise<void> {
     const { shipper, carrier } = shipment;
-    const reasonNote = reason ? `<p><strong>Reason for dispute:</strong> ${reason}</p>` : '';
+    const reasonNote = reason
+      ? `<p><strong>Reason for dispute:</strong> ${reason}</p>`
+      : '';
 
     if (shipper) {
       await this.sendSafe(
@@ -261,18 +272,21 @@ export class NotificationsService {
   async onDisputeResolved({ shipment, reason }: ShipmentEvent): Promise<void> {
     const { shipper, carrier } = shipment;
     const outcome = shipment.status.toUpperCase();
-    const reasonNote = reason ? `<p><strong>Resolution note:</strong> ${reason}</p>` : '';
+    const reasonNote = reason
+      ? `<p><strong>Resolution note:</strong> ${reason}</p>`
+      : '';
 
-    const body = (firstName: string) => this.baseTemplate(
-      `Dispute resolved — ${outcome}`,
-      `
+    const body = (firstName: string) =>
+      this.baseTemplate(
+        `Dispute resolved — ${outcome}`,
+        `
       <p>Hi ${firstName},</p>
       <p>The dispute on shipment <strong>${shipment.trackingNumber}</strong> has been reviewed and resolved by our admin team.</p>
       <p><strong>Outcome:</strong> ${outcome}</p>
       ${reasonNote}
       ${this.shipmentSummary(shipment)}
       `,
-    );
+      );
 
     if (shipper) {
       await this.sendSafe(

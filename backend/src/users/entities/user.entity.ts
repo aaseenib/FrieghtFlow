@@ -60,7 +60,12 @@ export class User {
   })
   verificationTokenExpiry: Date | null;
 
-  @Column({ name: 'reset_password_token', nullable: true, type: 'varchar', select: false })
+  @Column({
+    name: 'reset_password_token',
+    nullable: true,
+    type: 'varchar',
+    select: false,
+  })
   resetPasswordToken: string | null;
 
   @Column({

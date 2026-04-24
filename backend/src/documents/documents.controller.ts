@@ -96,10 +96,7 @@ export class DocumentsController {
   @ApiOperation({ summary: 'Get document metadata by ID' })
   @ApiResponse({ status: 200, description: 'Document metadata' })
   @ApiResponse({ status: 404, description: 'Document not found' })
-  findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: User,
-  ) {
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: User) {
     return this.documentsService.findOne(id, user);
   }
 
@@ -112,7 +109,10 @@ export class DocumentsController {
     @CurrentUser() user: User,
     @Res() res: Response,
   ) {
-    const { filePath, originalName } = await this.documentsService.getFilePath(id, user);
+    const { filePath, originalName } = await this.documentsService.getFilePath(
+      id,
+      user,
+    );
     res.download(filePath, originalName);
   }
 

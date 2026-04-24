@@ -84,7 +84,9 @@ export class AdminService {
   async deactivateUser(id: string, requesterId: string): Promise<User> {
     const user = await this.findUser(id);
     if (user.id === requesterId) {
-      throw new BadRequestException('Admins cannot deactivate their own account');
+      throw new BadRequestException(
+        'Admins cannot deactivate their own account',
+      );
     }
     if (!user.isActive) {
       throw new BadRequestException('User is already inactive');
@@ -102,7 +104,11 @@ export class AdminService {
     return this.findUser(id);
   }
 
-  async changeUserRole(id: string, role: UserRole, requesterId: string): Promise<User> {
+  async changeUserRole(
+    id: string,
+    role: UserRole,
+    requesterId: string,
+  ): Promise<User> {
     const user = await this.findUser(id);
     if (user.id === requesterId) {
       throw new BadRequestException('Admins cannot change their own role');
@@ -113,7 +119,9 @@ export class AdminService {
 
   // ── Shipments ────────────────────────────────────────────────────────────────
 
-  async listShipments(query: QueryAdminShipmentsDto): Promise<PaginatedAdminShipments> {
+  async listShipments(
+    query: QueryAdminShipmentsDto,
+  ): Promise<PaginatedAdminShipments> {
     const { page = 1, limit = 20, status, from, to } = query;
     const skip = (page - 1) * limit;
 
@@ -147,7 +155,9 @@ export class AdminService {
   async getStats(): Promise<PlatformStats> {
     // User counts
     const totalUsers = await this.userRepo.count();
-    const activeUsers = await this.userRepo.count({ where: { isActive: true } });
+    const activeUsers = await this.userRepo.count({
+      where: { isActive: true },
+    });
 
     const usersByRole = await this.userRepo
       .createQueryBuilder('user')

@@ -101,7 +101,9 @@ export class AdminController {
   // ── Shipments ────────────────────────────────────────────────────────────────
 
   @Get('shipments')
-  @ApiOperation({ summary: 'List all shipments (filterable by status and date range)' })
+  @ApiOperation({
+    summary: 'List all shipments (filterable by status and date range)',
+  })
   @ApiResponse({ status: 200, description: 'Paginated shipment list' })
   listShipments(@Query() query: QueryAdminShipmentsDto) {
     return this.adminService.listShipments(query);

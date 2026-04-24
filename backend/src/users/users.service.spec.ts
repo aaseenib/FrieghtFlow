@@ -83,7 +83,9 @@ describe('UsersService', () => {
         role: UserRole.SHIPPER,
       });
 
-      expect(repo.findOne).toHaveBeenCalledWith({ where: { email: 'test@example.com' } });
+      expect(repo.findOne).toHaveBeenCalledWith({
+        where: { email: 'test@example.com' },
+      });
       expect(repo.create).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'test@example.com' }),
       );
@@ -118,7 +120,9 @@ describe('UsersService', () => {
 
     it('throws NotFoundException when user does not exist', async () => {
       repo.findOne!.mockResolvedValue(null);
-      await expect(service.findOne('missing-id')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('missing-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -172,14 +176,19 @@ describe('UsersService', () => {
         expect.objectContaining({ refreshToken: expect.any(String) }),
       );
       // The stored value should NOT be the raw token
-      const updateArgs = repo.update!.mock.calls[0] as [string, { refreshToken: string }];
+      const updateArgs = repo.update!.mock.calls[0] as [
+        string,
+        { refreshToken: string },
+      ];
       expect(updateArgs[1].refreshToken).not.toBe('raw-refresh-token');
     });
 
     it('stores null when token is null (logout)', async () => {
       repo.update!.mockResolvedValue(undefined);
       await service.updateRefreshToken('user-uuid-1', null);
-      expect(repo.update).toHaveBeenCalledWith('user-uuid-1', { refreshToken: null });
+      expect(repo.update).toHaveBeenCalledWith('user-uuid-1', {
+        refreshToken: null,
+      });
     });
   });
 
@@ -243,7 +252,9 @@ describe('UsersService', () => {
 
     it('throws NotFoundException when user does not exist', async () => {
       repo.findOne!.mockResolvedValue(null);
-      await expect(service.remove('missing-id')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('missing-id')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
