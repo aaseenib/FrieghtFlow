@@ -13,6 +13,7 @@ import {
   ILike,
   SelectQueryBuilder,
 } from 'typeorm';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { v4 as uuidv4 } from 'uuid';
 import { Shipment } from './entities/shipment.entity';
@@ -558,6 +559,70 @@ export class ShipmentsService {
       new ShipmentEvent(full, admin.id, reason),
     );
     return saved;
+  }
+
+  // ── Analytics ────────────────────────────────────────────────────────────────
+
+  async getAnalytics(user: User, query: AnalyticsQueryDto) {
+    const qb = this.shipmentRepo.createQueryBuilder('s');
+
+    if (user.role === UserRole.SHIPPER) {
+      qb.where('s.shipper_id = :uid', { uid: user.id });
+    }
+
+    if (query.from && query.to) {
+      qb.andWhere('s.created_at BETWEEN :from AND :to', {
+        from: new Date(query.from),
+        to: new Date(query.to),
+      });
+    } else if (query.from) {
+      qb.andWhere('s.created_at >= :from', { from: new Date(query.from) });
+    } else if (query.to) {
+      qb.andWhere('s.created_at <= :to', { to: new Date(query.to) });
+    }
+
+    // Counts by status
+    const byStatus = await qb
+      .clone()
+      .select('s.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('s.status')
+      .getRawMany<{ status: ShipmentStatus; count: string }>();
+
+    const statusCounts = Object.fromEntries(
+      byStatus.map(({ status, count }) => [status, Number(count)]),
+    ) as Record<ShipmentStatus, number>;
+
+    // Total revenue from COMPLETED shipments
+    const revenueRow = await qb
+      .clone()
+      .andWhere('s.status = :completed', {
+        completed: ShipmentStatus.COMPLETED,
+      })
+      .select('COALESCE(SUM(CAST(s.price AS numeric)), 0)', 'total')
+      .getRawOne<{ total: string }>();
+
+    const totalRevenue = Number(revenueRow?.total ?? 0);
+
+    // Daily counts for last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const dailyRows = await qb
+      .clone()
+      .andWhere('s.created_at >= :since', { since: thirtyDaysAgo })
+      .select("DATE_TRUNC('day', s.created_at)", 'day')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy("DATE_TRUNC('day', s.created_at)")
+      .orderBy("DATE_TRUNC('day', s.created_at)", 'ASC')
+      .getRawMany<{ day: string; count: string }>();
+
+    const dailyTrends = dailyRows.map(({ day, count }) => ({
+      date: new Date(day).toISOString().slice(0, 10),
+      count: Number(count),
+    }));
+
+    return { statusCounts, totalRevenue, dailyTrends };
   }
 
   // ── History ──────────────────────────────────────────────────────────────────

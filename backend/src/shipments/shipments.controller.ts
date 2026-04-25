@@ -32,6 +32,7 @@ import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ExportShipmentsDto } from './dto/export-shipments.dto';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
 
 class DisputeBody {
   @ApiPropertyOptional()
@@ -133,6 +134,14 @@ export class ShipmentsController {
   }
 
   // ── Shared actions ───────────────────────────────────────────────────────────
+
+  @Get('analytics')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SHIPPER)
+  @ApiOperation({ summary: 'Shipment analytics — admin sees all, shipper sees own' })
+  getAnalytics(@CurrentUser() user: User, @Query() query: AnalyticsQueryDto) {
+    return this.shipmentsService.getAnalytics(user, query);
+  }
 
   @Get()
   @ApiOperation({

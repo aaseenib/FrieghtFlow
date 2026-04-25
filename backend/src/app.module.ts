@@ -15,6 +15,8 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { DocumentsModule } from './documents/documents.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { CarriersModule } from './carriers/carriers.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 const shipmentCreateTracker = (context: ExecutionContext): string => {
   const request = context.switchToHttp().getRequest<{
@@ -115,6 +117,8 @@ const throttlerErrorMessage = (context: ExecutionContext): string => {
     AdminModule,
     DocumentsModule,
     WebhooksModule,
+    CarriersModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [
