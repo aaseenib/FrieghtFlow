@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ExecutionContext } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -15,6 +15,11 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { DocumentsModule } from './documents/documents.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { AddressesModule } from './addresses/addresses.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
+import { BidsModule } from './bids/bids.module';
+import { NotificationPreferencesModule } from './notification-preferences/notification-preferences.module';
+import { AdminAuditInterceptor } from './audit-log/admin-audit.interceptor';
 import { CarriersModule } from './carriers/carriers.module';
 import { ReviewsModule } from './reviews/reviews.module';
 
@@ -117,6 +122,10 @@ const throttlerErrorMessage = (context: ExecutionContext): string => {
     AdminModule,
     DocumentsModule,
     WebhooksModule,
+    AddressesModule,
+    AuditLogModule,
+    BidsModule,
+    NotificationPreferencesModule,
     CarriersModule,
     ReviewsModule,
   ],
@@ -126,6 +135,10 @@ const throttlerErrorMessage = (context: ExecutionContext): string => {
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AdminAuditInterceptor,
     },
   ],
 })
