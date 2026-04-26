@@ -14,6 +14,7 @@ import {
   CardTitle,
   CardDescription,
 } from '../../../../components/ui/card';
+import { UserTableRowSkeleton } from '../../../../components/ui/skeleton';
 
 const ROLE_OPTIONS: { label: string; value: UserRole | 'all' }[] = [
   { label: 'All Roles', value: 'all' },
@@ -140,9 +141,9 @@ export default function AdminUsersPage() {
 
       {/* Table */}
       {loading ? (
-        <div className="space-y-3">
+        <div className="rounded-xl border bg-card shadow divide-y divide-border">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-14 rounded-lg bg-muted animate-pulse" />
+            <UserTableRowSkeleton key={i} />
           ))}
         </div>
       ) : !result || result.data.length === 0 ? (
