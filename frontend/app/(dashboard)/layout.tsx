@@ -6,6 +6,7 @@ import { cn } from '../../lib/utils';
 import { useAuthStore } from '../../stores/auth.store';
 import { useShipmentSocket } from '../../hooks/useShipmentSocket';
 import { NotificationBell } from '../../components/notifications/notification-bell';
+import { ThemeToggle } from '../../components/ui/ThemeToggle';
 
 const SHIPPER_NAV = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -51,6 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="text-primary-foreground font-bold text-xs">FF</span>
           </div>
           <span className="font-bold text-foreground flex-1">FreightFlow</span>
+          <ThemeToggle />
           <NotificationBell />
         </div>
 
