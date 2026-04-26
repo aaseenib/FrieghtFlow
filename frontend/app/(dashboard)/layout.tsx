@@ -29,6 +29,7 @@ const ADMIN_NAV = [
   { href: '/admin', label: 'Admin Panel' },
   { href: '/admin/users', label: 'Manage Users' },
   { href: '/admin/shipments', label: 'Shipment Oversight' },
+  { href: '/admin/disputes', label: 'Disputes' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
