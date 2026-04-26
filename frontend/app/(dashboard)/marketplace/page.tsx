@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { shipmentApi } from '../../../lib/api/shipment.api';
 import { PaginatedShipments } from '../../../types/shipment.types';
 import { ShipmentCard } from '../../../components/shipment/shipment-card';
+import { ShipmentCardSkeleton } from '../../../components/ui/skeleton';
 import { Input } from '../../../components/ui/input';
 import { Button } from '../../../components/ui/button';
 import { toast } from 'sonner';
@@ -88,7 +89,7 @@ export default function MarketplacePage() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-36 rounded-lg bg-muted animate-pulse" />
+            <ShipmentCardSkeleton key={i} />
           ))}
         </div>
       ) : !result || result.data.length === 0 ? (
